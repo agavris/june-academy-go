@@ -15,7 +15,7 @@ func NewSection(course *Course, maxStudents int) *Section {
 		Students:    make([]*Student, 0),
 	}
 	if course.TimeSlot == "AM" || course.TimeSlot == "PM" {
-		sec.MaxStudents = 25
+		sec.MaxStudents = 24
 	} else {
 		sec.MaxStudents = 42
 	}

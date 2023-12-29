@@ -126,6 +126,6 @@ func (s *Student) Equals(other *Student) bool {
 }
 
 func (s *Student) String() string {
-	return fmt.Sprintf("%d, %s", s.StudentID, s.Grade)
-	//return fmt.Sprintf("Student ID: %d, Enrolled AM: %s, Enrolled PM: %s, Enrolled FD: %s, SS: %f", s.StudentID, s.EnrolledCourses.AMCourse.CourseName, s.EnrolledCourses.PMCourse.CourseName, s.EnrolledCourses.FullDayCourse.CourseName, s.SatisfactionScore())
+	//return fmt.Sprintf("%d, %s", s.StudentID, s.Grade)
+	return fmt.Sprintf("Student ID: %d, Enrolled AM: %s, Enrolled PM: %s, Enrolled FD: %s, SS: %f", s.StudentID, s.EnrolledCourses.AMCourse.CourseName, s.EnrolledCourses.PMCourse.CourseName, s.EnrolledCourses.FullDayCourse.CourseName, s.SatisfactionScore())
 }
