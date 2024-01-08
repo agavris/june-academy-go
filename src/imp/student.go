@@ -53,6 +53,41 @@ func (s *Student) UnrollEverything() {
 	s.EnrolledCourses = &EnrolledCourses{}
 }
 
+//func (s *Student) SatisfactionScore() float64 {
+//	score := 0.0
+//
+//	// Function to check if the course is in the requested list and update the score
+//	updateScore := func(courseName string, requestedCourses map[string]struct{}, increment float64) {
+//		if courseName != "" {
+//			if _, found := requestedCourses[courseName]; !found {
+//				score += increment
+//			}
+//		}
+//	}
+//
+//	// Creating maps for AM and PM requested courses
+//	requestedAMCourses := make(map[string]struct{})
+//	for _, course := range s.RequestedCourses.GetAMCourses() {
+//		requestedAMCourses[course] = struct{}{}
+//	}
+//
+//	requestedPMCourses := make(map[string]struct{})
+//	for _, course := range s.RequestedCourses.GetPMCourses() {
+//		requestedPMCourses[course] = struct{}{}
+//	}
+//
+//	// Check and update score for each course
+//	if s.EnrolledCourses.FullDayCourse.CourseName != "" {
+//		updateScore(s.EnrolledCourses.FullDayCourse.CourseName, requestedAMCourses, 1)
+//		return score
+//	}
+//
+//	updateScore(s.EnrolledCourses.AMCourse.CourseName, requestedAMCourses, 0.5)
+//	updateScore(s.EnrolledCourses.PMCourse.CourseName, requestedPMCourses, 0.5)
+//
+//	return score
+//}
+
 func (s *Student) SatisfactionScore() float64 {
 	score := 0.0
 

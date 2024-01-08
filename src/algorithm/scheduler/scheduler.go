@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/agavris/june-academy-go/src/algorithm/utils"
 	"github.com/agavris/june-academy-go/src/imp"
+	"github.com/schollz/progressbar/v3"
 	"math/rand"
 	"sort"
 )
@@ -156,7 +157,13 @@ func (s *Scheduler) ClearSections() {
 }
 
 func (s *Scheduler) Run(numIterations int) {
+	bar := progressbar.Default(int64(numIterations))
+
 	for _ = range make([]int, numIterations) {
+		err := bar.Add(1)
+		if err != nil {
+			return
+		}
 		s.ExtractByGradeAndShuffle()
 		s.AssignStudentsToSections()
 		s.ScoreSchedule()
@@ -170,19 +177,6 @@ func (s *Scheduler) Run(numIterations int) {
 		fmt.Println(section)
 	}
 
-}
-
-func (s *Scheduler) PrintEverything() {
-	for _, section := range s.CourseNameToSection {
-		fmt.Println(section)
-		for _, student := range section.Students {
-			fmt.Println(student)
-		}
-	}
-
-	for _, student := range s.DataLoader.Students {
-		fmt.Println(student)
-	}
 }
 
 func (s *Scheduler) CourseNameToSectionToSlice() []*imp.Section {

@@ -31,12 +31,14 @@ func (d *DataLoader) loadRequests() {
 	file, err := os.OpenFile("jadata.csv", os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
+		fmt.Println("Ensure that your file is named jadata.csv and is in the same directory as the executable.")
 		return
 	}
 	defer file.Close()
 
 	if err := gocsv.UnmarshalFile(file, &d.Requests); err != nil {
 		fmt.Printf("Error reading file: %v\n", err)
+		fmt.Println("Ensure that your file is named jadata.csv and is in the same directory as the executable.")
 		return
 	}
 }
@@ -85,12 +87,5 @@ func (d *DataLoader) loadCourses() {
 	for courseName, timeslot := range courseSet {
 		course := imp.NewCourse(courseName, timeslot)
 		d.Courses = append(d.Courses, course)
-	}
-}
-
-func (d *DataLoader) PrintEverything() {
-	fmt.Println("Printing Students:")
-	for _, student := range d.Students {
-		fmt.Println(student.StudentPriority)
 	}
 }
