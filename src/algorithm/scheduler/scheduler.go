@@ -136,6 +136,10 @@ func (s *Scheduler) ScoreSchedule() float64 {
 	studentCopy := make([]*imp.Student, len(s.DataLoader.Students))
 	for i, student := range s.DataLoader.Students {
 		score += student.SatisfactionScore()
+		if s.BestSchedule != nil && score >= s.BestSchedule.Score {
+			return score
+		}
+
 		studentCopy[i] = student.DeepCopy()
 	}
 
@@ -180,7 +184,7 @@ func (s *Scheduler) Run(numIterations int) {
 }
 
 func (s *Scheduler) CourseNameToSectionToSlice() []*imp.Section {
-	var sections []*imp.Section
+	sections := make([]*imp.Section, 0, len(s.CourseNameToSection))
 	for _, section := range s.CourseNameToSection {
 		sections = append(sections, section.DeepCopy())
 	}

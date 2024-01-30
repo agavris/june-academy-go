@@ -53,7 +53,7 @@ func (s *Section) DeepCopy() *Section {
 }
 
 func (s *Section) String() string {
-	return fmt.Sprintf("Section: %s, Timeslot: %s, Students: %d", s.Course.CourseName, s.Course.TimeSlot, len(s.Students))
+	return fmt.Sprintf("Section: %s, Timeslot: %s, Students: %d, List: %s", s.Course.CourseName, s.Course.TimeSlot, len(s.Students), s.Students)
 }
 
 func (s *Section) Equals(other *Section) bool {

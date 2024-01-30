@@ -1,6 +1,7 @@
 package algorithm
 
 type Request struct {
+	ID    int    `csv:"student_id"`
 	Grade string `csv:"Grade in school this year"`
 	AMFD1 string `csv:"AM Course - 1st Choice. (Drop down option)"`
 	AMFD2 string `csv:"AM Course - 2nd Choice. (Drop down option)"`

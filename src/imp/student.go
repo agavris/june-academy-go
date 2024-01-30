@@ -15,17 +15,19 @@ type Student struct {
 	StudentID        int
 	StudentPriority  int
 	Grade            string
+	ID               int
 	EnrolledCourses  *EnrolledCourses
 	RequestedCourses *algorithm.Request
 }
 
-func NewStudent(studentID int, studentPriority int, requestedCourses *algorithm.Request, grade string) *Student {
+func NewStudent(studentID int, studentPriority int, requestedCourses *algorithm.Request, grade string, id int) *Student {
 	return &Student{
 		StudentID:        studentID,
 		StudentPriority:  studentPriority,
 		EnrolledCourses:  &EnrolledCourses{},
 		RequestedCourses: requestedCourses,
 		Grade:            grade,
+		ID:               id,
 	}
 }
 
@@ -88,40 +90,75 @@ func (s *Student) UnrollEverything() {
 //	return score
 //}
 
+//func (s *Student) SatisfactionScore() float64 {
+//	score := 0.0
+//
+//	amCourse := s.EnrolledCourses.AMCourse
+//	pmCourse := s.EnrolledCourses.PMCourse
+//	fullDayCourse := s.EnrolledCourses.FullDayCourse
+//
+//	requestedAMCourses := make(map[string]struct{})
+//	for _, course := range s.RequestedCourses.GetAMCourses() {
+//		requestedAMCourses[course] = struct{}{}
+//	}
+//
+//	requestedPMCourses := make(map[string]struct{})
+//	for _, course := range s.RequestedCourses.GetPMCourses() {
+//		requestedPMCourses[course] = struct{}{}
+//	}
+//
+//	if fullDayCourse.CourseName != "" {
+//		if _, found := requestedAMCourses[fullDayCourse.CourseName]; !found {
+//			score += 1
+//		}
+//		return score
+//	}
+//
+//	if amCourse.CourseName != "" {
+//		if _, found := requestedAMCourses[amCourse.CourseName]; !found {
+//			score += 0.5
+//		}
+//	}
+//
+//	if pmCourse.CourseName != "" {
+//		if _, found := requestedPMCourses[pmCourse.CourseName]; !found {
+//			score += 0.5
+//		}
+//	}
+//
+//	return score
+//}
+
 func (s *Student) SatisfactionScore() float64 {
 	score := 0.0
 
-	amCourse := s.EnrolledCourses.AMCourse
-	pmCourse := s.EnrolledCourses.PMCourse
+	// Function to check if course is in the slice
+	isInCourses := func(courseName string, courses []string) bool {
+		for _, c := range courses {
+			if c == courseName {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Check FullDayCourse
 	fullDayCourse := s.EnrolledCourses.FullDayCourse
-
-	requestedAMCourses := make(map[string]struct{})
-	for _, course := range s.RequestedCourses.GetAMCourses() {
-		requestedAMCourses[course] = struct{}{}
-	}
-
-	requestedPMCourses := make(map[string]struct{})
-	for _, course := range s.RequestedCourses.GetPMCourses() {
-		requestedPMCourses[course] = struct{}{}
-	}
-
 	if fullDayCourse.CourseName != "" {
-		if _, found := requestedAMCourses[fullDayCourse.CourseName]; !found {
+		if !isInCourses(fullDayCourse.CourseName, s.RequestedCourses.GetAMCourses()) {
 			score += 1
 		}
-		return score
+		return score // Early return if full day course is present
 	}
 
-	if amCourse.CourseName != "" {
-		if _, found := requestedAMCourses[amCourse.CourseName]; !found {
-			score += 0.5
-		}
+	// Check AMCouse and PMCouse
+	amCourse := s.EnrolledCourses.AMCourse
+	if amCourse.CourseName != "" && !isInCourses(amCourse.CourseName, s.RequestedCourses.GetAMCourses()) {
+		score += 0.5
 	}
-
-	if pmCourse.CourseName != "" {
-		if _, found := requestedPMCourses[pmCourse.CourseName]; !found {
-			score += 0.5
-		}
+	pmCourse := s.EnrolledCourses.PMCourse
+	if pmCourse.CourseName != "" && !isInCourses(pmCourse.CourseName, s.RequestedCourses.GetPMCourses()) {
+		score += 0.5
 	}
 
 	return score
@@ -153,6 +190,7 @@ func (s *Student) DeepCopy() *Student {
 		EnrolledCourses:  s.CopyEnrolledCourses(),
 		RequestedCourses: s.CopyRequestedCourses(),
 		Grade:            s.Grade,
+		ID:               s.ID,
 	}
 }
 
@@ -161,6 +199,6 @@ func (s *Student) Equals(other *Student) bool {
 }
 
 func (s *Student) String() string {
-	//return fmt.Sprintf("%d, %s", s.StudentID, s.Grade)
-	return fmt.Sprintf("Student ID: %d, Enrolled AM: %s, Enrolled PM: %s, Enrolled FD: %s, SS: %f", s.StudentID, s.EnrolledCourses.AMCourse.CourseName, s.EnrolledCourses.PMCourse.CourseName, s.EnrolledCourses.FullDayCourse.CourseName, s.SatisfactionScore())
+	return fmt.Sprintf("ID: %d", s.ID)
+	//return fmt.Sprintf("Student ID: %d, Grade: %s, Enrolled AM: %s, Enrolled PM: %s, Enrolled FD: %s, SS: %f", s.StudentID, s.Grade, s.EnrolledCourses.AMCourse.CourseName, s.EnrolledCourses.PMCourse.CourseName, s.EnrolledCourses.FullDayCourse.CourseName, s.SatisfactionScore())
 }
