@@ -28,7 +28,7 @@ func (d *DataLoader) loadData() {
 }
 
 func (d *DataLoader) loadRequests() {
-	file, err := os.OpenFile("jadata.csv", os.O_RDWR|os.O_CREATE, os.ModePerm)
+	file, err := os.OpenFile("ja2024.csv", os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
 		fmt.Println("Ensure that your file is named jadata_.csv and is in the same directory as the executable.")
@@ -49,8 +49,8 @@ func (d *DataLoader) loadStudents() {
 	converter["Sophomore"] = 2
 	converter["Junior"] = 1
 
-	for i, request := range d.Requests {
-		student := imp.NewStudent(i, converter[request.Grade], request, request.Grade, request.ID)
+	for _, request := range d.Requests {
+		student := imp.NewStudent(request.FirstName, request.LastName, request.Email, converter[request.Grade], request, request.Grade)
 		d.Students = append(d.Students, student)
 	}
 }

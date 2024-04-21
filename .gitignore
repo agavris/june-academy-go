@@ -23,3 +23,5 @@ go.work
 
 #Data files
 jadata.csv
+/results/
+/sections/

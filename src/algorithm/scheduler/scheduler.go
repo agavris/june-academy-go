@@ -1,12 +1,15 @@
 package scheduler
 
 import (
+	"encoding/csv"
 	"fmt"
 	"github.com/agavris/june-academy-go/src/algorithm/utils"
 	"github.com/agavris/june-academy-go/src/imp"
 	"github.com/schollz/progressbar/v3"
 	"math/rand"
-	"sort"
+	"os"
+	"strings"
+	"time"
 )
 
 type Schedule struct {
@@ -38,6 +41,9 @@ func (s *Scheduler) loadSections() {
 }
 
 func (s *Scheduler) safeAddStudentToSection(student *imp.Student, section *imp.Section) bool {
+	if section == nil {
+		panic("Attempted to add student to a nil section")
+	}
 
 	if len(section.Students) < section.MaxStudents {
 		section.AddStudent(student)
@@ -108,14 +114,9 @@ func (s *Scheduler) ExtractByGradeAndShuffle() {
 
 	for _, student := range s.DataLoader.Students {
 		student.UnrollEverything()
-		studentsByPriority[student.StudentPriority] = append(studentsByPriority[student.StudentPriority], student)
+		priority := student.StudentPriority
+		studentsByPriority[priority] = append(studentsByPriority[priority], student)
 	}
-	keys := make([]int, 0, len(studentsByPriority))
-	for key := range studentsByPriority {
-		keys = append(keys, key)
-	}
-
-	sort.Ints(keys)
 
 	for _, group := range studentsByPriority {
 		rand.Shuffle(len(group), func(i, j int) {
@@ -124,8 +125,8 @@ func (s *Scheduler) ExtractByGradeAndShuffle() {
 	}
 
 	var shuffledStudents []*imp.Student
-	for _, key := range keys {
-		shuffledStudents = append(shuffledStudents, studentsByPriority[key]...)
+	for priority := 1; priority <= 3; priority++ {
+		shuffledStudents = append(shuffledStudents, studentsByPriority[priority]...)
 	}
 
 	s.DataLoader.Students = shuffledStudents
@@ -143,7 +144,7 @@ func (s *Scheduler) ScoreSchedule() float64 {
 		studentCopy[i] = student.DeepCopy()
 	}
 
-	//if the current BestSchedule's score is higher than the current score, then we have a new best schedule
+	//if the current BestSchedule's score is lower than the current score, then we have a new best schedule
 	if s.BestSchedule == nil || score < s.BestSchedule.Score {
 		s.BestSchedule = &Schedule{
 			Students: studentCopy,
@@ -160,13 +161,59 @@ func (s *Scheduler) ClearSections() {
 	}
 }
 
-func (s *Scheduler) Run(numIterations int) {
-	bar := progressbar.Default(int64(numIterations))
+func (s *Scheduler) CourseNameToSectionToSlice() []*imp.Section {
+	sections := make([]*imp.Section, 0, len(s.CourseNameToSection))
+	for _, section := range s.CourseNameToSection {
+		sections = append(sections, section.DeepCopy())
+	}
+	return sections
+}
 
-	for _ = range make([]int, numIterations) {
+func (s *Scheduler) Run(numIterations int) *Schedule {
+	bar := progressbar.Default(int64(numIterations))
+	sectionFolderPath := "sections/"
+	resultsFolderPath := "results/"
+
+	if _, err := os.Stat(sectionFolderPath); os.IsNotExist(err) {
+		err := os.Mkdir(sectionFolderPath, os.ModePerm)
+		if err != nil {
+			return nil
+		}
+	}
+
+	if _, err := os.Stat(resultsFolderPath); os.IsNotExist(err) {
+		err := os.Mkdir(resultsFolderPath, os.ModePerm)
+		if err != nil {
+			return nil
+		}
+	}
+
+	currentTime := time.Now()
+
+	file, err := os.Create(fmt.Sprintf("%sresults_%s.csv", resultsFolderPath, currentTime.Format("2006-01-02_15-04-05")))
+	if err != nil {
+		fmt.Println("Error creating file")
+		return nil
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	sectionFile, err := os.Create(fmt.Sprintf("%ssections_%s.csv", sectionFolderPath, currentTime.Format("2006-01-02_15-04-05")))
+	if err != nil {
+		fmt.Println("Error creating section file:", err)
+		return nil
+	}
+	defer sectionFile.Close()
+
+	sectionWriter := csv.NewWriter(sectionFile)
+	defer sectionWriter.Flush()
+
+	for range make([]int, numIterations) {
 		err := bar.Add(1)
 		if err != nil {
-			return
+			return nil
 		}
 		s.ExtractByGradeAndShuffle()
 		s.AssignStudentsToSections()
@@ -174,19 +221,55 @@ func (s *Scheduler) Run(numIterations int) {
 		s.ClearSections()
 	}
 	fmt.Println(s.BestSchedule.Score)
+
+	err = writer.Write([]string{"Email", "First Name", "Last Name", "Grade", "AM Course", "PM Course", "FD Course", "SS Score"})
+	if err != nil {
+		fmt.Println("Error writing to CSV file:", err)
+		return nil
+	}
+
+	if err := sectionWriter.Write([]string{"Course Name", "Max Students", "Enrolled Students", "Student Roster"}); err != nil {
+		fmt.Println("Error writing section header to CSV file:", err)
+		return nil
+	}
+
 	for _, student := range s.BestSchedule.Students {
-		fmt.Println(student)
+		err := writer.Write([]string{
+			student.StudentEmail,
+			student.StudentFirstName,
+			student.StudentLastName,
+			student.Grade,
+			student.EnrolledCourses.AMCourse.CourseName,
+			student.EnrolledCourses.PMCourse.CourseName,
+			student.EnrolledCourses.FullDayCourse.CourseName,
+			fmt.Sprintf("%.6f", student.SatisfactionScore()),
+		})
+		if err != nil {
+			fmt.Println("Error writing to CSV file:", err)
+			return nil
+		}
+		fmt.Println(fmt.Sprintf("%s %s, %s, AM: %s, PM: %s, FD: %s, SS: %f", student.StudentFirstName, student.StudentLastName, student.Grade, student.EnrolledCourses.AMCourse.CourseName, student.EnrolledCourses.PMCourse.CourseName, student.EnrolledCourses.FullDayCourse.CourseName, student.SatisfactionScore()))
 	}
+
 	for _, section := range s.BestSchedule.Sections {
-		fmt.Println(section)
+		var studentNames []string
+		for _, student := range section.Students {
+			studentNames = append(studentNames, student.StudentFirstName+" "+student.StudentLastName)
+		}
+
+		// Join student names with a newline character for better readability in the CSV
+		studentRoster := strings.Join(studentNames, "\n")
+
+		if err := sectionWriter.Write([]string{
+			section.Course.CourseName,
+			fmt.Sprintf("%d", section.MaxStudents),
+			fmt.Sprintf("%d", len(section.Students)),
+			fmt.Sprintf("\"%s\"", studentRoster), // Ensure names are enclosed in quotes
+		}); err != nil {
+			fmt.Println("Error writing section data to CSV file:", err)
+			return nil
+		}
 	}
 
-}
-
-func (s *Scheduler) CourseNameToSectionToSlice() []*imp.Section {
-	sections := make([]*imp.Section, 0, len(s.CourseNameToSection))
-	for _, section := range s.CourseNameToSection {
-		sections = append(sections, section.DeepCopy())
-	}
-	return sections
+	return s.BestSchedule
 }
