@@ -28,17 +28,23 @@ func (d *DataLoader) loadData() {
 }
 
 func (d *DataLoader) loadRequests() {
-	file, err := os.OpenFile("ja2024.csv", os.O_RDWR|os.O_CREATE, os.ModePerm)
+	file, err := os.OpenFile("jadata.csv", os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
-		fmt.Println("Ensure that your file is named jadata_.csv and is in the same directory as the executable.")
+		fmt.Println("Ensure that your file is named jadata.csv and is in the same directory as the executable.")
 		return
 	}
-	defer file.Close()
+
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
 
 	if err := gocsv.UnmarshalFile(file, &d.Requests); err != nil {
 		fmt.Printf("Error reading file: %v\n", err)
-		fmt.Println("Ensure that your file is named jadata_.csv and is in the same directory as the executable.")
+		fmt.Println("Ensure that your file is named jadata.csv and is in the same directory as the executable.")
 		return
 	}
 }

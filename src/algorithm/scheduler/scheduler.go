@@ -53,15 +53,6 @@ func (s *Scheduler) safeAddStudentToSection(student *imp.Student, section *imp.S
 	return false
 }
 
-func (s *Scheduler) safeRemoveStudentFromSection(student *imp.Student, section *imp.Section) bool {
-	if len(section.Students) > 0 {
-		section.RemoveStudent(student)
-		student.AddEnrolledCourse(section.Course)
-		return true
-	}
-	return false
-}
-
 func (s *Scheduler) FindFirstAvailableSectionForStudent(student *imp.Student, timeSlot string) *imp.Section {
 	var courseNames []string
 
@@ -70,6 +61,7 @@ func (s *Scheduler) FindFirstAvailableSectionForStudent(student *imp.Student, ti
 	} else if timeSlot == "PM" {
 		courseNames = student.RequestedCourses.GetPMCourses()
 	}
+
 	for _, courseName := range courseNames {
 		if courseName != "" {
 			section := s.CourseNameToSection[courseName]
@@ -80,6 +72,41 @@ func (s *Scheduler) FindFirstAvailableSectionForStudent(student *imp.Student, ti
 	}
 	return s.GetFirstAvailableSectionWithoutRequest(timeSlot)
 }
+
+//func (s *Scheduler) FindFirstAvailableSectionForStudent(student *imp.Student, timeSlot string) *imp.Section {
+//	var courseNames []string
+//	priorityCourse := "Model UN Global Leadership Course on Promoting Democracy Worldwide" // Set the priority course name
+//
+//	if timeSlot == "AM" || timeSlot == "FullDay" {
+//		courseNames = student.RequestedCourses.GetAMCourses()
+//	} else if timeSlot == "PM" {
+//		courseNames = student.RequestedCourses.GetPMCourses()
+//	}
+//
+//	if student.StudentPriority > 1 {
+//		for _, courseName := range courseNames {
+//			if courseName == priorityCourse {
+//				section := s.CourseNameToSection[courseName]
+//				if section != nil && len(section.Students) < section.MaxStudents {
+//					return section
+//				}
+//			}
+//		}
+//	}
+//
+//	// Then check other courses
+//	for _, courseName := range courseNames {
+//		if courseName != "" && courseName != priorityCourse {
+//			section := s.CourseNameToSection[courseName]
+//			if section != nil && len(section.Students) < section.MaxStudents {
+//				return section
+//			}
+//		}
+//	}
+//
+//	// If no requested course is available, fall back to the first available section
+//	return s.GetFirstAvailableSectionWithoutRequest(timeSlot)
+//}
 
 func (s *Scheduler) GetFirstAvailableSectionWithoutRequest(timeSlot string) *imp.Section {
 	for _, section := range s.CourseNameToSection {
@@ -257,14 +284,13 @@ func (s *Scheduler) Run(numIterations int) *Schedule {
 			studentNames = append(studentNames, student.StudentFirstName+" "+student.StudentLastName)
 		}
 
-		// Join student names with a newline character for better readability in the CSV
 		studentRoster := strings.Join(studentNames, "\n")
 
 		if err := sectionWriter.Write([]string{
 			section.Course.CourseName,
 			fmt.Sprintf("%d", section.MaxStudents),
 			fmt.Sprintf("%d", len(section.Students)),
-			fmt.Sprintf("\"%s\"", studentRoster), // Ensure names are enclosed in quotes
+			fmt.Sprintf("\"%s\"", studentRoster),
 		}); err != nil {
 			fmt.Println("Error writing section data to CSV file:", err)
 			return nil

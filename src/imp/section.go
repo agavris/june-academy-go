@@ -1,6 +1,12 @@
 package imp
 
-import "fmt"
+import (
+	"encoding/csv"
+	"fmt"
+	"log"
+	"os"
+	"strconv"
+)
 
 type Section struct {
 	Course      *Course
@@ -34,13 +40,13 @@ var events = map[string]int{
 	"ABCs of Word Puzzles - Wordle and Beyond":                                       24,
 	"Weston's Ecology - Exploring Local Conservation Land":                           24,
 	"\"Not Bored, Just Board\" Games":                                                24,
-	"Magic The Gathering: Learn to Play and Compete":                                 24,
+	"Magic The Gathering: Learn to Play and Compete":                                 14,
 	"Brain and Body Exercise":                                                        24,
 	"Play Like a Kid":                                                                24,
 	"Disc Golf":                                                                      24,
 	"\"Old School\" Photography":                                                     16,
 	"Chemistry of Cooking":                                                           15,
-	"Model UN Global Leadership Course on Promoting Democracy Worldwide":             24,
+	"Model UN Global Leadership Course on Promoting Democracy Worldwide":             20,
 	"Fishing at the Pond":                                                            25,
 	"Farming to Benefit the Community":                                               15,
 	"Amigurumi: Crocheting Small Stuffed Animals":                                    25,
@@ -53,6 +59,35 @@ var events = map[string]int{
 	"Introduction to Podcasting":                                                     25,
 }
 
+func loadEventsFromCSV(filePath string) (map[string]int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	events := make(map[string]int)
+	for _, record := range records {
+		if len(record) != 2 {
+			continue // skip bad records
+		}
+		maxStudents, err := strconv.Atoi(record[1])
+		if err != nil {
+			log.Printf("Skipping record with invalid number of students: %v\n", record)
+			continue
+		}
+		events[record[0]] = maxStudents
+	}
+
+	return events, nil
+}
+
 func NewSection(course *Course, maxStudents int) *Section {
 	sec := &Section{
 		Course:      course,
@@ -60,11 +95,16 @@ func NewSection(course *Course, maxStudents int) *Section {
 		Students:    make([]*Student, 0),
 	}
 
+	var err error
+	events, err := loadEventsFromCSV("events.csv")
+	if err != nil {
+		fmt.Println("Error loading events from CSV file: ", err)
+	}
 	if max, ok := events[course.CourseName]; ok {
 		sec.MaxStudents = max
 	} else {
 		// Handle the case where the course name is not found in the map
-		fmt.Println("Course name not found in events map. Assigning default value.")
+		fmt.Println("Course name not found in events map. Please check to make sure the names match in both your events.csv file and your jadata.csv file!")
 		panic(course.CourseName)
 	}
 
