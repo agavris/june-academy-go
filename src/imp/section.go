@@ -1,11 +1,12 @@
 package imp
 
 import (
+	"bufio"
 	"encoding/csv"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Section struct {
@@ -14,75 +15,50 @@ type Section struct {
 	Students    []*Student
 }
 
-var events = map[string]int{
-	"Our Feathered Friends":                                      24,
-	"Songwriters' Seminar":                                       24,
-	"Quilting for a Cause":                                       10,
-	"Historical Massachusetts Sites":                             24,
-	"Wellness Walks":                                             24,
-	"Ultimate Frisbee":                                           24,
-	"Dungeons and Dragons":                                       18,
-	"Crash Course: College Essay":                                24,
-	"Art History at the MFA - Full Day Course":                   24,
-	"Intro to Italian":                                           24,
-	"Gods and Heroes: Unveiling the Myths of Rome and Greece":    24,
-	"Fabulous Fungi!!!":                                          24,
-	"Amazing Race - Full Day Course - JUNIORS ONLY":              48,
-	"Web Development and Design":                                 24,
-	"Beautiful Morning Walks":                                    24,
-	"Crochet and Knit":                                           24,
-	"Teamwork and collaboration: Competitive Multiplayer Gaming": 24,
-	"Local Hidden History: Public History and the Golden Ball Tavern Museum":         12,
-	"Performing Arts Trip (NYC) - Full Day Course":                                   75,
-	"Beyond Newbury Street: Neighborhoods of Boston - Full Day Course- JUNIORS ONLY": 18,
-	"College Tours - Full Day Course":                                                45,
-	"Feminist Beautification and Jewelry Making":                                     24,
-	"ABCs of Word Puzzles - Wordle and Beyond":                                       24,
-	"Weston's Ecology - Exploring Local Conservation Land":                           24,
-	"\"Not Bored, Just Board\" Games":                                                24,
-	"Magic The Gathering: Learn to Play and Compete":                                 14,
-	"Brain and Body Exercise":                                                        24,
-	"Play Like a Kid":                                                                24,
-	"Disc Golf":                                                                      24,
-	"\"Old School\" Photography":                                                     16,
-	"Chemistry of Cooking":                                                           15,
-	"Model UN Global Leadership Course on Promoting Democracy Worldwide":             20,
-	"Fishing at the Pond":                                                            25,
-	"Farming to Benefit the Community":                                               15,
-	"Amigurumi: Crocheting Small Stuffed Animals":                                    25,
-	"Bridge: Bill Gates's Favorite Card Game 6":                                      25,
-	"How to Speak K-Pop":                                                             18,
-	"Moth-Inspired Storytelling":                                                     25,
-	"Financial Literacy":                                                             25,
-	"Boston Impact-Self Defense for Post-High School Life":                           18,
-	"Building a Personal Fitness Plan":                                               25,
-	"Introduction to Podcasting":                                                     25,
-}
-
 func loadEventsFromCSV(filePath string) (map[string]int, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error opening file: %w", err)
 	}
 	defer file.Close()
 
-	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-
+	// Use bufio.Scanner to handle different types of newline characters
+	scanner := bufio.NewScanner(file)
 	events := make(map[string]int)
-	for _, record := range records {
-		if len(record) != 2 {
-			continue // skip bad records
-		}
-		maxStudents, err := strconv.Atoi(record[1])
+	lineCount := 0
+
+	for scanner.Scan() {
+		lineCount++
+		line := scanner.Text()
+
+		// Use strings.NewReader to create a reader from the scanned text
+		reader := csv.NewReader(strings.NewReader(line))
+		reader.Comma = ';'
+		reader.LazyQuotes = true // Allow quotes in fields
+		reader.TrimLeadingSpace = true
+
+		record, err := reader.Read()
 		if err != nil {
-			log.Printf("Skipping record with invalid number of students: %v\n", record)
+			fmt.Printf("Error reading line %d: %v\n", lineCount, err)
+			continue // Skip this record and move to the next
+		}
+
+		if len(record) != 2 {
+			fmt.Printf("Skipping malformed record on line %d (expected 2 fields, got %d): %v\n", lineCount, len(record), record)
 			continue
 		}
-		events[record[0]] = maxStudents
+
+		courseName := strings.Trim(record[0], "\"") // Clean up the course name
+		maxStudents, err := strconv.Atoi(record[1])
+		if err != nil {
+			fmt.Printf("Skipping record with invalid number of students on line %d: %v, error: %v\n", lineCount, record, err)
+			continue
+		}
+		events[courseName] = maxStudents
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error while scanning file: %w", err)
 	}
 
 	return events, nil

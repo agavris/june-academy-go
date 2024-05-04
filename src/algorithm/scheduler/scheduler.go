@@ -197,71 +197,90 @@ func (s *Scheduler) CourseNameToSectionToSlice() []*imp.Section {
 }
 
 func (s *Scheduler) Run(numIterations int) *Schedule {
-	bar := progressbar.Default(int64(numIterations))
 	sectionFolderPath := "sections/"
 	resultsFolderPath := "results/"
-
-	if _, err := os.Stat(sectionFolderPath); os.IsNotExist(err) {
-		err := os.Mkdir(sectionFolderPath, os.ModePerm)
-		if err != nil {
-			return nil
-		}
-	}
-
-	if _, err := os.Stat(resultsFolderPath); os.IsNotExist(err) {
-		err := os.Mkdir(resultsFolderPath, os.ModePerm)
-		if err != nil {
-			return nil
-		}
-	}
-
 	currentTime := time.Now()
 
-	file, err := os.Create(fmt.Sprintf("%sresults_%s.csv", resultsFolderPath, currentTime.Format("2006-01-02_15-04-05")))
-	if err != nil {
-		fmt.Println("Error creating file")
+	// Ensure necessary directories exist
+	if err := ensureDirectory(sectionFolderPath); err != nil {
+		fmt.Println("Failed to create section directory:", err)
 		return nil
 	}
-	defer file.Close()
+	if err := ensureDirectory(resultsFolderPath); err != nil {
+		fmt.Println("Failed to create results directory:", err)
+		return nil
+	}
 
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	sectionFile, err := os.Create(fmt.Sprintf("%ssections_%s.csv", sectionFolderPath, currentTime.Format("2006-01-02_15-04-05")))
+	// Setup CSV files for results and sections
+	resultsFile, err := setupCSVFile(resultsFolderPath, "results_", currentTime)
 	if err != nil {
-		fmt.Println("Error creating section file:", err)
+		fmt.Println("Error setting up results CSV file:", err)
+		return nil
+	}
+	defer resultsFile.Close()
+	resultsWriter := csv.NewWriter(resultsFile)
+	defer resultsWriter.Flush()
+
+	sectionFile, err := setupCSVFile(sectionFolderPath, "sections_", currentTime)
+	if err != nil {
+		fmt.Println("Error setting up section CSV file:", err)
 		return nil
 	}
 	defer sectionFile.Close()
-
 	sectionWriter := csv.NewWriter(sectionFile)
 	defer sectionWriter.Flush()
 
-	for range make([]int, numIterations) {
-		err := bar.Add(1)
-		if err != nil {
-			return nil
-		}
+	// Initialize progress bar for tracking
+	bar := progressbar.Default(int64(numIterations))
+
+	for i := 0; i < numIterations; i++ {
+		bar.Add(1)
 		s.ExtractByGradeAndShuffle()
 		s.AssignStudentsToSections()
 		s.ScoreSchedule()
 		s.ClearSections()
 	}
-	fmt.Println(s.BestSchedule.Score)
 
-	err = writer.Write([]string{"Email", "First Name", "Last Name", "Grade", "AM Course", "PM Course", "FD Course", "SS Score"})
-	if err != nil {
+	// Output schedule and section information to CSV files
+	if err := outputSchedule(resultsWriter, sectionWriter, s.BestSchedule); err != nil {
 		fmt.Println("Error writing to CSV file:", err)
 		return nil
 	}
 
+	fmt.Println("Best schedule score:", s.BestSchedule.Score)
+	return s.BestSchedule
+}
+
+func ensureDirectory(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		// Directory doesn't exist, create it
+		return os.Mkdir(path, os.ModePerm)
+	}
+	return nil // Directory already exists
+}
+
+func setupCSVFile(path, prefix string, currentTime time.Time) (*os.File, error) {
+	filename := fmt.Sprintf("%s%s%s.csv", path, prefix, currentTime.Format("2006-01-02_15-04-05"))
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		// File doesn't exist, create it
+		return os.Create(filename)
+	}
+	// File already exists (this might be ideal if you want to append, but you would need to adjust other code)
+	return os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0644)
+}
+
+func outputSchedule(resultsWriter, sectionWriter *csv.Writer, schedule *Schedule) error {
+	// Writing header rows
+	if err := resultsWriter.Write([]string{"Email", "First Name", "Last Name", "Grade", "AM Course", "PM Course", "FD Course", "SS Score"}); err != nil {
+		return err
+	}
 	if err := sectionWriter.Write([]string{"Course Name", "Max Students", "Enrolled Students", "Student Roster"}); err != nil {
-		fmt.Println("Error writing section header to CSV file:", err)
-		return nil
+		return err
 	}
 
-	for _, student := range s.BestSchedule.Students {
-		err := writer.Write([]string{
+	// Writing data rows
+	for _, student := range schedule.Students {
+		record := []string{
 			student.StudentEmail,
 			student.StudentFirstName,
 			student.StudentLastName,
@@ -270,32 +289,27 @@ func (s *Scheduler) Run(numIterations int) *Schedule {
 			student.EnrolledCourses.PMCourse.CourseName,
 			student.EnrolledCourses.FullDayCourse.CourseName,
 			fmt.Sprintf("%.6f", student.SatisfactionScore()),
-		})
-		if err != nil {
-			fmt.Println("Error writing to CSV file:", err)
-			return nil
 		}
-		fmt.Println(fmt.Sprintf("%s %s, %s, AM: %s, PM: %s, FD: %s, SS: %f", student.StudentFirstName, student.StudentLastName, student.Grade, student.EnrolledCourses.AMCourse.CourseName, student.EnrolledCourses.PMCourse.CourseName, student.EnrolledCourses.FullDayCourse.CourseName, student.SatisfactionScore()))
+		if err := resultsWriter.Write(record); err != nil {
+			return err
+		}
 	}
 
-	for _, section := range s.BestSchedule.Sections {
-		var studentNames []string
-		for _, student := range section.Students {
-			studentNames = append(studentNames, student.StudentFirstName+" "+student.StudentLastName)
+	for _, section := range schedule.Sections {
+		studentNames := make([]string, len(section.Students))
+		for i, student := range section.Students {
+			studentNames[i] = student.StudentFirstName + " " + student.StudentLastName
 		}
-
-		studentRoster := strings.Join(studentNames, "\n")
-
-		if err := sectionWriter.Write([]string{
+		studentRoster := strings.Join(studentNames, ", ")
+		record := []string{
 			section.Course.CourseName,
 			fmt.Sprintf("%d", section.MaxStudents),
 			fmt.Sprintf("%d", len(section.Students)),
 			fmt.Sprintf("\"%s\"", studentRoster),
-		}); err != nil {
-			fmt.Println("Error writing section data to CSV file:", err)
-			return nil
+		}
+		if err := sectionWriter.Write(record); err != nil {
+			return err
 		}
 	}
-
-	return s.BestSchedule
+	return nil
 }

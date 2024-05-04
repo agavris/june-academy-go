@@ -22,6 +22,7 @@ scheduler
 go.work
 
 #Data files
+events.csv
 jadata.csv
 /results/
 /sections/

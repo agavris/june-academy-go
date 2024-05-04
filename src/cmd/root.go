@@ -29,7 +29,7 @@ var rootCmd = &cobra.Command{
 var numIterations int
 
 func init() {
-	rootCmd.PersistentFlags().IntVarP(&numIterations, "iterations", "n", 100000, "Number of iterations to run the algorithm.")
+	rootCmd.PersistentFlags().IntVarP(&numIterations, "iterations", "n", 100, "Number of iterations to run the algorithm.")
 }
 
 func Execute() {
