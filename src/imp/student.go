@@ -12,16 +12,20 @@ type EnrolledCourses struct {
 }
 
 type Student struct {
-	StudentID        int
+	StudentFirstName string
+	StudentLastName  string
+	StudentEmail     string
 	StudentPriority  int
 	Grade            string
 	EnrolledCourses  *EnrolledCourses
 	RequestedCourses *algorithm.Request
 }
 
-func NewStudent(studentID int, studentPriority int, requestedCourses *algorithm.Request, grade string) *Student {
+func NewStudent(firstName string, lastName string, email string, studentPriority int, requestedCourses *algorithm.Request, grade string) *Student {
 	return &Student{
-		StudentID:        studentID,
+		StudentFirstName: firstName,
+		StudentLastName:  lastName,
+		StudentEmail:     email,
 		StudentPriority:  studentPriority,
 		EnrolledCourses:  &EnrolledCourses{},
 		RequestedCourses: requestedCourses,
@@ -53,75 +57,36 @@ func (s *Student) UnrollEverything() {
 	s.EnrolledCourses = &EnrolledCourses{}
 }
 
-//func (s *Student) SatisfactionScore() float64 {
-//	score := 0.0
-//
-//	// Function to check if the course is in the requested list and update the score
-//	updateScore := func(courseName string, requestedCourses map[string]struct{}, increment float64) {
-//		if courseName != "" {
-//			if _, found := requestedCourses[courseName]; !found {
-//				score += increment
-//			}
-//		}
-//	}
-//
-//	// Creating maps for AM and PM requested courses
-//	requestedAMCourses := make(map[string]struct{})
-//	for _, course := range s.RequestedCourses.GetAMCourses() {
-//		requestedAMCourses[course] = struct{}{}
-//	}
-//
-//	requestedPMCourses := make(map[string]struct{})
-//	for _, course := range s.RequestedCourses.GetPMCourses() {
-//		requestedPMCourses[course] = struct{}{}
-//	}
-//
-//	// Check and update score for each course
-//	if s.EnrolledCourses.FullDayCourse.CourseName != "" {
-//		updateScore(s.EnrolledCourses.FullDayCourse.CourseName, requestedAMCourses, 1)
-//		return score
-//	}
-//
-//	updateScore(s.EnrolledCourses.AMCourse.CourseName, requestedAMCourses, 0.5)
-//	updateScore(s.EnrolledCourses.PMCourse.CourseName, requestedPMCourses, 0.5)
-//
-//	return score
-//}
-
 func (s *Student) SatisfactionScore() float64 {
 	score := 0.0
 
-	amCourse := s.EnrolledCourses.AMCourse
-	pmCourse := s.EnrolledCourses.PMCourse
+	// Function to check if course is in the slice
+	isInCourses := func(courseName string, courses []string) bool {
+		for _, c := range courses {
+			if c == courseName {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Check FullDayCourse
 	fullDayCourse := s.EnrolledCourses.FullDayCourse
-
-	requestedAMCourses := make(map[string]struct{})
-	for _, course := range s.RequestedCourses.GetAMCourses() {
-		requestedAMCourses[course] = struct{}{}
-	}
-
-	requestedPMCourses := make(map[string]struct{})
-	for _, course := range s.RequestedCourses.GetPMCourses() {
-		requestedPMCourses[course] = struct{}{}
-	}
-
 	if fullDayCourse.CourseName != "" {
-		if _, found := requestedAMCourses[fullDayCourse.CourseName]; !found {
+		if !isInCourses(fullDayCourse.CourseName, s.RequestedCourses.GetAMCourses()) {
 			score += 1
 		}
-		return score
+		return score // Early return if full day course is present
 	}
 
-	if amCourse.CourseName != "" {
-		if _, found := requestedAMCourses[amCourse.CourseName]; !found {
-			score += 0.5
-		}
+	// Check AMCouse and PMCouse
+	amCourse := s.EnrolledCourses.AMCourse
+	if amCourse.CourseName != "" && !isInCourses(amCourse.CourseName, s.RequestedCourses.GetAMCourses()) {
+		score += 0.5
 	}
-
-	if pmCourse.CourseName != "" {
-		if _, found := requestedPMCourses[pmCourse.CourseName]; !found {
-			score += 0.5
-		}
+	pmCourse := s.EnrolledCourses.PMCourse
+	if pmCourse.CourseName != "" && !isInCourses(pmCourse.CourseName, s.RequestedCourses.GetPMCourses()) {
+		score += 0.5
 	}
 
 	return score
@@ -148,7 +113,9 @@ func (s *Student) CopyRequestedCourses() *algorithm.Request {
 
 func (s *Student) DeepCopy() *Student {
 	return &Student{
-		StudentID:        s.StudentID,
+		StudentFirstName: s.StudentFirstName,
+		StudentLastName:  s.StudentLastName,
+		StudentEmail:     s.StudentEmail,
 		StudentPriority:  s.StudentPriority,
 		EnrolledCourses:  s.CopyEnrolledCourses(),
 		RequestedCourses: s.CopyRequestedCourses(),
@@ -157,10 +124,10 @@ func (s *Student) DeepCopy() *Student {
 }
 
 func (s *Student) Equals(other *Student) bool {
-	return s.StudentID == other.StudentID
+	return s.StudentEmail == other.StudentEmail
 }
 
 func (s *Student) String() string {
-	//return fmt.Sprintf("%d, %s", s.StudentID, s.Grade)
-	return fmt.Sprintf("Student ID: %d, Enrolled AM: %s, Enrolled PM: %s, Enrolled FD: %s, SS: %f", s.StudentID, s.EnrolledCourses.AMCourse.CourseName, s.EnrolledCourses.PMCourse.CourseName, s.EnrolledCourses.FullDayCourse.CourseName, s.SatisfactionScore())
+	return fmt.Sprintf("%s %s", s.StudentFirstName, s.StudentLastName)
+	//return fmt.Sprintf("%s %s, %s, AM: %s, PM: %s, FD: %s, SS: %f", s.StudentFirstName, s.StudentLastName, s.Grade, s.EnrolledCourses.AMCourse.CourseName, s.EnrolledCourses.PMCourse.CourseName, s.EnrolledCourses.FullDayCourse.CourseName, s.SatisfactionScore())
 }

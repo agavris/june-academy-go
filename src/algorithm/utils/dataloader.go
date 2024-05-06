@@ -34,7 +34,13 @@ func (d *DataLoader) loadRequests() {
 		fmt.Println("Ensure that your file is named jadata.csv and is in the same directory as the executable.")
 		return
 	}
-	defer file.Close()
+
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
 
 	if err := gocsv.UnmarshalFile(file, &d.Requests); err != nil {
 		fmt.Printf("Error reading file: %v\n", err)
@@ -49,8 +55,8 @@ func (d *DataLoader) loadStudents() {
 	converter["Sophomore"] = 2
 	converter["Junior"] = 1
 
-	for i, request := range d.Requests {
-		student := imp.NewStudent(i, converter[request.Grade], request, request.Grade)
+	for _, request := range d.Requests {
+		student := imp.NewStudent(request.FirstName, request.LastName, request.Email, converter[request.Grade], request, request.Grade)
 		d.Students = append(d.Students, student)
 	}
 }
