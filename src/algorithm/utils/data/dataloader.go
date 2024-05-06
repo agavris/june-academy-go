@@ -1,12 +1,12 @@
-package utils
+package data
 
 import (
 	"fmt"
 	"github.com/agavris/june-academy-go/src/algorithm"
+	"github.com/agavris/june-academy-go/src/algorithm/utils/events"
 	"github.com/agavris/june-academy-go/src/imp"
 	"github.com/gocarina/gocsv"
 	"os"
-	"strings"
 )
 
 type DataLoader struct {
@@ -32,13 +32,14 @@ func (d *DataLoader) loadRequests() {
 	if err != nil {
 		fmt.Printf("Error opening file: %v\n", err)
 		fmt.Println("Ensure that your file is named jadata.csv and is in the same directory as the executable.")
+		fmt.Println("Also please make sure that you have the correct number of columns and the names are specified correctly \n as shown in the instruction sheet.")
 		return
 	}
 
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-
+			fmt.Printf("Error closing file: %v\n", err)
 		}
 	}(file)
 
@@ -63,17 +64,13 @@ func (d *DataLoader) loadStudents() {
 
 func (d *DataLoader) loadCourses() {
 	courseSet := make(map[string]string)
-
+	courses, _ := events.ReadCourses("events.csv")
+	coursesToTime := events.MapCoursesToTimeSlots(courses)
 	getTimeSlot := func(courseName string, fieldType string) string {
-		if strings.Contains(courseName, "Full Day") {
-			return "FullDay"
+		if time, ok := coursesToTime[courseName]; ok {
+			return time
 		}
-		if strings.HasPrefix(fieldType, "AMFD") {
-			return "AM"
-		}
-		if strings.HasPrefix(fieldType, "PM") {
-			return "PM"
-		}
+		fmt.Printf("Course name not found in events map. Please check to make sure the names match in both your events.csv file and your jadata.csv file! Course name: %s, Field type: %s\n", courseName, fieldType)
 		return ""
 	}
 	for _, request := range d.Requests {
