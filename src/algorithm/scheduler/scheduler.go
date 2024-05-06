@@ -3,7 +3,7 @@ package scheduler
 import (
 	"encoding/csv"
 	"fmt"
-	"github.com/agavris/june-academy-go/src/algorithm/utils"
+	"github.com/agavris/june-academy-go/src/algorithm/utils/data"
 	"github.com/agavris/june-academy-go/src/imp"
 	"github.com/schollz/progressbar/v3"
 	"math/rand"
@@ -19,14 +19,14 @@ type Schedule struct {
 }
 
 type Scheduler struct {
-	DataLoader          *utils.DataLoader
+	DataLoader          *data.DataLoader
 	CourseNameToSection map[string]*imp.Section
 	BestSchedule        *Schedule
 }
 
 func NewScheduler() *Scheduler {
 	scheduler := &Scheduler{
-		DataLoader:          utils.NewDataLoader(),
+		DataLoader:          data.NewDataLoader(),
 		CourseNameToSection: make(map[string]*imp.Section),
 	}
 	scheduler.loadSections()
@@ -234,7 +234,10 @@ func (s *Scheduler) Run(numIterations int) *Schedule {
 	bar := progressbar.Default(int64(numIterations))
 
 	for i := 0; i < numIterations; i++ {
-		bar.Add(1)
+		err := bar.Add(1)
+		if err != nil {
+			return nil
+		}
 		s.ExtractByGradeAndShuffle()
 		s.AssignStudentsToSections()
 		s.ScoreSchedule()

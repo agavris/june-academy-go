@@ -1,67 +1,14 @@
 package imp
 
 import (
-	"bufio"
-	"encoding/csv"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
+	"github.com/agavris/june-academy-go/src/algorithm/utils/events"
 )
 
 type Section struct {
 	Course      *Course
 	MaxStudents int
 	Students    []*Student
-}
-
-func loadEventsFromCSV(filePath string) (map[string]int, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("error opening file: %w", err)
-	}
-	defer file.Close()
-
-	// Use bufio.Scanner to handle different types of newline characters
-	scanner := bufio.NewScanner(file)
-	events := make(map[string]int)
-	lineCount := 0
-
-	for scanner.Scan() {
-		lineCount++
-		line := scanner.Text()
-
-		// Use strings.NewReader to create a reader from the scanned text
-		reader := csv.NewReader(strings.NewReader(line))
-		reader.Comma = ';'
-		reader.LazyQuotes = true // Allow quotes in fields
-		reader.TrimLeadingSpace = true
-
-		record, err := reader.Read()
-		if err != nil {
-			fmt.Printf("Error reading line %d: %v\n", lineCount, err)
-			continue // Skip this record and move to the next
-		}
-
-		if len(record) != 2 {
-			fmt.Printf("Skipping malformed record on line %d (expected 2 fields, got %d): %v\n", lineCount, len(record), record)
-			continue
-		}
-
-		courseName := strings.Trim(record[0], "\"") // Clean up the course name
-		maxStudents, err := strconv.Atoi(record[1])
-		if err != nil {
-			fmt.Printf("Skipping record with invalid number of students on line %d: %v, error: %v\n", lineCount, record, err)
-			continue
-		}
-		events[courseName] = maxStudents
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error while scanning file: %w", err)
-	}
-
-	return events, nil
 }
 
 func NewSection(course *Course, maxStudents int) *Section {
@@ -72,11 +19,12 @@ func NewSection(course *Course, maxStudents int) *Section {
 	}
 
 	var err error
-	events, err := loadEventsFromCSV("events.csv")
+	courses, err := events.ReadCourses("events.csv")
+	coursesToMax := events.MapCoursesToMaxStudents(courses)
 	if err != nil {
 		fmt.Println("Error loading events from CSV file: ", err)
 	}
-	if max, ok := events[course.CourseName]; ok {
+	if max, ok := coursesToMax[course.CourseName]; ok {
 		sec.MaxStudents = max
 	} else {
 		// Handle the case where the course name is not found in the map
